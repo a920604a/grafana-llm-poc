@@ -52,7 +52,10 @@ func NewApp(ctx context.Context, _ backend.AppInstanceSettings) (instancemgmt.In
 	if err != nil {
 		return nil, err
 	}
-	rootCtx, cancel := context.WithCancel(ctx)
+	// The context passed to the instance factory can be canceled after instance
+	// creation. MCP is a long-lived child process, so keep its values but bind
+	// cancellation to Dispose instead of the factory call lifecycle.
+	rootCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
 	app := &App{
 		config:      cfg,
 		provider:    provider,

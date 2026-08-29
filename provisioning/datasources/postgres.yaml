@@ -1,0 +1,22 @@
+apiVersion: 1
+
+datasources:
+  - name: Demo PostgreSQL
+    uid: postgres-demo
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    user: $POSTGRES_USER
+    database: $POSTGRES_DB
+    isDefault: true
+    editable: false
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1700
+      timescaledb: false
+      maxOpenConns: 10
+      maxIdleConns: 2
+      connMaxLifetime: 14400
+      timeInterval: 1m
+    secureJsonData:
+      password: $POSTGRES_PASSWORD

@@ -8,7 +8,7 @@
 - LLM 使用 OpenAI-compatible abstraction，預設 provider 為 Ollama。
 - Dashboard 修改採「產生草稿 → 預覽 → 使用者確認 → 套用」，模型不能自行寫入 Grafana。
 
-詳細設計與完整驗收契約請參考 [SPEC.md](./SPEC.md)。
+詳細設計與完整驗收契約請參考 [SPEC.md](./SPEC.md)；PostgreSQL 範例資料、提示詞與 Dashboard 驗證方式請參考 [Dashboard 生成與驗證指南](./docs/DASHBOARD_GENERATION.md)。
 
 ## 系統架構
 
@@ -144,13 +144,15 @@ Docker edge network
 
 Docker internal network
 ├── Grafana
-└── Ollama:11434（沒有 host port）
+├── Ollama:11434（沒有 host port）
+└── PostgreSQL:5432（沒有 host port）
 
 Docker bootstrap network（一次性）
 └── ollama-init -> 下載模型 -> 寫入 ollama-data volume -> exit 0
 ```
 
 - Ollama 不公開 host port。
+- PostgreSQL 不公開 host port，只允許 Grafana 從 Docker internal network 存取。
 - `mcp-grafana` 是 Grafana container 內的 STDIO child process，不公開 network port。
 - LLM/MCP credentials 只存在 backend environment。
 - Grafana update checks、usage reporting與 suggested-plugin downloads 預設關閉。
@@ -202,6 +204,7 @@ docker compose ps -a
 
 - `grafana`：`Up`
 - `ollama`：`Up (healthy)`
+- `postgres`：`Up (healthy)`
 - `ollama-init`：`Exited (0)`，代表模型準備成功
 
 開啟 <http://127.0.0.1:3000>。帳密由 `.env` 的 `GRAFANA_ADMIN_USER` 與
@@ -243,6 +246,17 @@ docker compose port ollama 11434
 4. 描述 dashboard/panel 需求並送出。
 5. 檢查結構化草稿、queries、warnings 與 JSON。
 6. 確認內容後才按「確認並套用」。
+
+專案會自動建立 UID 為 `postgres-demo` 的 **Demo PostgreSQL** datasource，並載入最近 24 小時的服務請求範例資料。可直接使用下列提示詞測試：
+
+```text
+使用 PostgreSQL datasource postgres-demo 建立「Service Operations」Dashboard。
+資料表是 service_requests，時間欄位是 recorded_at。
+加入每分鐘請求量、5xx 錯誤率、平均延遲，以及依 service 分組的表格。
+所有 SQL 必須使用 Grafana $__timeFilter(recorded_at) 巨集。
+```
+
+完整操作、預期 SQL 與驗收清單請見 [Dashboard 生成與驗證指南](./docs/DASHBOARD_GENERATION.md)。
 
 ## 建置與測試
 

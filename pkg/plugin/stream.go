@@ -9,6 +9,7 @@ import (
 
 	"github.com/acme/ai-assistant/pkg/chat"
 	"github.com/acme/ai-assistant/pkg/dashboard"
+	"github.com/acme/ai-assistant/pkg/grafanamcp"
 	"github.com/acme/ai-assistant/pkg/llm"
 	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
@@ -242,6 +243,8 @@ func normalizeStreamError(err error) (string, string, bool) {
 		return "LLM_PROTOCOL_ERROR", "模型回傳了不相容的串流格式。", true
 	case errors.Is(err, dashboard.ErrConflict):
 		return "DRAFT_CONFLICT", "草稿工作已經開始。", false
+	case errors.Is(err, grafanamcp.ErrUnavailable):
+		return "MCP_UNAVAILABLE", "Grafana MCP 無法使用。", true
 	default:
 		return "LLM_UNAVAILABLE", "目前無法連線模型服務。", true
 	}
