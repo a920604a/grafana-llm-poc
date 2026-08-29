@@ -1,0 +1,9 @@
+.git
+.github
+.config/coverage
+coverage
+dist
+node_modules
+playwright-report
+test-results
+*.log

@@ -5,7 +5,7 @@ ARG GRAFANA_VERSION=12.3.3
 FROM node:${NODE_VERSION} AS frontend
 WORKDIR /src
 COPY package.json package-lock.json* ./
-RUN npm install
+RUN npm ci
 COPY . .
 RUN npm run build
 
@@ -15,13 +15,14 @@ WORKDIR /src
 COPY go.mod go.sum Magefile.go ./
 RUN go mod download
 COPY pkg ./pkg
+COPY src/plugin.json ./src/plugin.json
 COPY --from=frontend /src/dist ./dist
-RUN go run github.com/magefile/mage@v1.15.0 -v build:linux
+RUN go run github.com/magefile/mage@v1.15.0 -v build:linux build:linuxARM64
 RUN GOBIN=/out go install github.com/grafana/mcp-grafana/cmd/mcp-grafana@${MCP_GRAFANA_VERSION}
 
 FROM grafana/grafana:${GRAFANA_VERSION}
 USER root
 COPY --from=backend /out/mcp-grafana /usr/local/bin/mcp-grafana
 COPY --from=backend /src/dist /var/lib/grafana/plugins/acme-aiassistant-app
-RUN chmod +x /usr/local/bin/mcp-grafana /var/lib/grafana/plugins/acme-aiassistant-app/gpx_ai_assistant_linux_amd64 2>/dev/null || true
+RUN chmod +x /usr/local/bin/mcp-grafana /var/lib/grafana/plugins/acme-aiassistant-app/gpx_ai_assistant_linux_*
 USER grafana

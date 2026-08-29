@@ -48,24 +48,17 @@ func TestCallResource(t *testing.T) {
 		expBody   []byte
 	}{
 		{
-			name:      "get ping 200",
+			name:      "get health 200",
 			method:    http.MethodGet,
-			path:      "ping",
+			path:      "v1/health",
 			expStatus: http.StatusOK,
+			expBody:   []byte(`{"model":"qwen2.5:3b","provider":"openai-compatible","status":"ok"}`),
 		},
 		{
-			name:      "get echo 405",
-			method:    http.MethodGet,
-			path:      "echo",
-			expStatus: http.StatusMethodNotAllowed,
-		},
-		{
-			name:      "post echo 200",
+			name:      "post health 405",
 			method:    http.MethodPost,
-			path:      "echo",
-			body:      []byte(`{"message":"ok"}`),
-			expStatus: http.StatusOK,
-			expBody:   []byte(`{"message":"ok"}`),
+			path:      "v1/health",
+			expStatus: http.StatusMethodNotAllowed,
 		},
 		{
 			name:      "get non existing handler 404",

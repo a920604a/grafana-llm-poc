@@ -67,16 +67,16 @@ export default function AssistantPage() {
     <div className={styles.tabs}><Button variant={mode === 'chat' ? 'primary' : 'secondary'} onClick={() => setMode('chat')}>對話</Button><Button variant={mode === 'dashboard' ? 'primary' : 'secondary'} onClick={() => setMode('dashboard')}>產生 Dashboard</Button></div>
     {mode === 'dashboard' && <section className={styles.settings}>
       <div className={styles.tabs}><Button size="sm" variant={operation === 'create_dashboard' ? 'primary' : 'secondary'} onClick={() => setOperation('create_dashboard')}>新增</Button><Button size="sm" variant={operation === 'modify_dashboard' ? 'primary' : 'secondary'} onClick={() => setOperation('modify_dashboard')}>修改</Button></div>
-      <Field label="Datasource UID（逗號分隔）" required><Input value={datasourceUids} onChange={(e) => setDatasourceUids(e.currentTarget.value)} placeholder="prometheus" /></Field>
-      <Field label="Folder UID（可留空）"><Input value={folderUid} onChange={(e) => setFolderUid(e.currentTarget.value)} /></Field>
-      {operation === 'modify_dashboard' && <Field label="Dashboard UID" required><Input value={dashboardUid} onChange={(e) => setDashboardUid(e.currentTarget.value)} /></Field>}
+      <Field label="Datasource UID（逗號分隔）" required><Input id="dashboard-datasource-uids" value={datasourceUids} onChange={(e) => setDatasourceUids(e.currentTarget.value)} placeholder="prometheus" /></Field>
+      <Field label="Folder UID（可留空）"><Input id="dashboard-folder-uid" value={folderUid} onChange={(e) => setFolderUid(e.currentTarget.value)} /></Field>
+      {operation === 'modify_dashboard' && <Field label="Dashboard UID" required><Input id="dashboard-uid" value={dashboardUid} onChange={(e) => setDashboardUid(e.currentTarget.value)} /></Field>}
     </section>}
     <section className={styles.conversation} aria-live="polite">
       {state.messages.length === 0 && <Alert title="純地端 AI 助理" severity="info">命令只送往 Grafana backend；聊天與 dashboard 結果皆透過 Grafana Live 串流。</Alert>}
       {state.messages.map((message) => <article key={message.id} className={message.role === 'user' ? styles.userMessage : styles.assistantMessage}><strong>{message.role === 'user' ? '你' : 'AI'}</strong><div className={styles.content}>{message.content || (message.status === 'pending' ? (mode === 'dashboard' ? '正在產生可審核草稿…' : '準備串流…') : '')}</div>{message.error && <div className={styles.error}>{message.error}</div>}</article>)}
       {draft && <article className={styles.draft}><h3>{draft.title}</h3><p>{draft.dashboard.panels instanceof Array ? `${draft.dashboard.panels.length} 個 panels` : 'Dashboard 草稿'}</p>{draft.warnings.map((w) => <Alert key={w.code} title={w.code} severity="warning">{w.message}</Alert>)}<details><summary>檢視 JSON</summary><pre>{JSON.stringify(draft.dashboard, null, 2)}</pre></details><Button onClick={applyDraft} disabled={applying || draft.applied}>{draft.applied ? '已套用至 Grafana' : applying ? '套用中…' : '確認並套用'}</Button></article>}
     </section>
-    <form onSubmit={send} className={styles.composer}><Field label={mode === 'chat' ? '輸入訊息' : '描述要建立的 Dashboard'}><TextArea rows={4} value={input} disabled={active} onChange={(e) => setInput(e.currentTarget.value)} placeholder={mode === 'chat' ? '例如：說明目前服務的錯誤率趨勢' : '例如：建立 API latency 與錯誤率 dashboard'} /></Field><div className={styles.actions}><Button type="submit" disabled={!input.trim() || active || (mode === 'dashboard' && !datasourceUids.trim())}>送出</Button>{active && <Button type="button" variant="destructive" fill="outline" onClick={cancel}>取消</Button>}</div></form>
+    <form onSubmit={send} className={styles.composer}><Field label={mode === 'chat' ? '輸入訊息' : '描述要建立的 Dashboard'}><TextArea id="assistant-prompt" rows={4} value={input} disabled={active} onChange={(e) => setInput(e.currentTarget.value)} placeholder={mode === 'chat' ? '例如：說明目前服務的錯誤率趨勢' : '例如：建立 API latency 與錯誤率 dashboard'} /></Field><div className={styles.actions}><Button type="submit" disabled={!input.trim() || active || (mode === 'dashboard' && !datasourceUids.trim())}>送出</Button>{active && <Button type="button" variant="destructive" fill="outline" onClick={cancel}>取消</Button>}</div></form>
   </div></PluginPage>;
 }
 

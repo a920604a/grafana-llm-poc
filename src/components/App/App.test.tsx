@@ -3,12 +3,17 @@ import { MemoryRouter } from 'react-router-dom';
 import { render, waitFor } from '@testing-library/react';
 import App from './App';
 
+jest.mock('../../pages/AssistantPage', () => ({
+  __esModule: true,
+  default: () => <h1>AI 助理</h1>,
+}));
+
 describe('Components/App', () => {
   beforeEach(() => {
     jest.resetAllMocks();
   });
 
-  test('renders without an error"', async () => {
+  test('renders the assistant route without an error', async () => {
     const { queryByText } = render(
       <MemoryRouter>
         <App />
