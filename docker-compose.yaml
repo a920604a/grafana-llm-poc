@@ -1,0 +1,63 @@
+services:
+  grafana:
+    build:
+      context: .
+      args:
+        GRAFANA_VERSION: ${GRAFANA_VERSION:-12.3.3}
+        MCP_GRAFANA_VERSION: ${MCP_GRAFANA_VERSION:-v1.2.0}
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: acme-aiassistant-app
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      LLM_BASE_URL: http://ollama:11434/v1
+      LLM_MODEL: ${LLM_MODEL:-qwen2.5:3b}
+      LLM_API_KEY: ${LLM_API_KEY:-ollama}
+      LLM_REQUEST_TIMEOUT: ${LLM_REQUEST_TIMEOUT:-180s}
+      MCP_GRAFANA_PATH: /usr/local/bin/mcp-grafana
+      GRAFANA_URL: http://127.0.0.1:3000
+      GRAFANA_USERNAME: ${GRAFANA_ADMIN_USER:-admin}
+      GRAFANA_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      ollama:
+        condition: service_healthy
+      ollama-init:
+        condition: service_completed_successfully
+    networks: [internal]
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:${OLLAMA_VERSION:-0.11.7}
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks: [internal]
+    restart: unless-stopped
+
+  ollama-init:
+    image: ollama/ollama:${OLLAMA_VERSION:-0.11.7}
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    command: ["pull", "${LLM_MODEL:-qwen2.5:3b}"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks: [internal]
+    restart: "no"
+
+networks:
+  internal:
+    internal: true
+
+volumes:
+  grafana-data:
+  ollama-data:
