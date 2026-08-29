@@ -10,6 +10,11 @@ import (
 	"github.com/acme/ai-assistant/pkg/llm"
 )
 
+// ErrInvalidOutput marks a draft that the model itself got wrong: unparsable JSON
+// or a dashboard that violates the policy. It is not a transport or availability
+// problem, so it must not be reported as an LLM connectivity failure.
+var ErrInvalidOutput = errors.New("model produced an invalid dashboard")
+
 type ToolCaller interface {
 	CallTool(context.Context, string, any) (json.RawMessage, error)
 }
@@ -62,7 +67,7 @@ Grafana datasource context：%s
 	text = strings.TrimSpace(text)
 	var dashboard map[string]any
 	if err := json.Unmarshal([]byte(text), &dashboard); err != nil {
-		return nil, fmt.Errorf("invalid dashboard JSON: %w", err)
+		return nil, fmt.Errorf("%w: invalid dashboard JSON: %v", ErrInvalidOutput, err)
 	}
 	if err := Validate(dashboard, command); err != nil {
 		return nil, err
@@ -73,7 +78,7 @@ Grafana datasource context：%s
 func Validate(value map[string]any, command Command) error {
 	title, _ := value["title"].(string)
 	if strings.TrimSpace(title) == "" {
-		return errors.New("dashboard title is required")
+		return fmt.Errorf("%w: dashboard title is required", ErrInvalidOutput)
 	}
 	delete(value, "uid")
 	delete(value, "id")
@@ -84,7 +89,7 @@ func Validate(value map[string]any, command Command) error {
 	}
 	panels, ok := value["panels"].([]any)
 	if !ok || len(panels) == 0 || len(panels) > 12 {
-		return errors.New("dashboard panels must contain 1..12 items")
+		return fmt.Errorf("%w: dashboard panels must contain 1..12 items", ErrInvalidOutput)
 	}
 	allowedDatasource := map[string]bool{}
 	for _, uid := range command.DatasourceUIDs {
@@ -95,25 +100,25 @@ func Validate(value map[string]any, command Command) error {
 	for _, raw := range panels {
 		panel, ok := raw.(map[string]any)
 		if !ok {
-			return errors.New("invalid panel")
+			return fmt.Errorf("%w: invalid panel", ErrInvalidOutput)
 		}
 		panelType, _ := panel["type"].(string)
 		if !allowedTypes[panelType] {
-			return fmt.Errorf("panel type %q is not allowed", panelType)
+			return fmt.Errorf("%w: panel type %q is not allowed", ErrInvalidOutput, panelType)
 		}
 		idFloat, ok := panel["id"].(float64)
 		if !ok || idFloat <= 0 || ids[int64(idFloat)] {
-			return errors.New("panel IDs must be unique positive integers")
+			return fmt.Errorf("%w: panel IDs must be unique positive integers", ErrInvalidOutput)
 		}
 		ids[int64(idFloat)] = true
 		ds, _ := panel["datasource"].(map[string]any)
 		uid, _ := ds["uid"].(string)
 		if len(allowedDatasource) > 0 && !allowedDatasource[uid] {
-			return fmt.Errorf("datasource UID %q is not allowed", uid)
+			return fmt.Errorf("%w: datasource UID %q is not allowed", ErrInvalidOutput, uid)
 		}
 		targets, ok := panel["targets"].([]any)
 		if !ok || len(targets) == 0 || len(targets) > 4 {
-			return errors.New("panel targets must contain 1..4 items")
+			return fmt.Errorf("%w: panel targets must contain 1..4 items", ErrInvalidOutput)
 		}
 	}
 	if command.Operation == CreateDashboard {

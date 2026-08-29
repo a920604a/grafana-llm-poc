@@ -17,6 +17,7 @@ import (
 var (
 	ErrUnavailable = errors.New("mcp-grafana unavailable")
 	ErrToolDenied  = errors.New("MCP tool is not allowed")
+	ErrToolFailed  = errors.New("MCP call failed")
 )
 
 var allowedTools = map[string]struct{}{
@@ -128,11 +129,11 @@ func (c *Client) call(ctx context.Context, method string, params any, destinatio
 		return ErrUnavailable
 	case resp := <-ch:
 		if resp.Error != nil {
-			return fmt.Errorf("MCP %s failed (%d): %s", method, resp.Error.Code, resp.Error.Message)
+			return fmt.Errorf("%w: MCP %s failed (%d): %s", ErrToolFailed, method, resp.Error.Code, resp.Error.Message)
 		}
 		if destination != nil {
 			if err := json.Unmarshal(resp.Result, destination); err != nil {
-				return fmt.Errorf("decode MCP response: %w", err)
+				return fmt.Errorf("%w: decode MCP response: %v", ErrToolFailed, err)
 			}
 		}
 		return nil

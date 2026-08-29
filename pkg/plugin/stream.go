@@ -222,7 +222,7 @@ func (a *App) runDashboardStream(ctx context.Context, req *backend.RunStreamRequ
 	if err != nil {
 		code, message, retryable := normalizeStreamError(err)
 		_ = send(streamEvent{Type: "error", Error: &eventError{Code: code, Message: message, Retryable: retryable}})
-		log.DefaultLogger.Error("dashboard draft failed", "request_id", requestID, "model", a.config.LLMModel, "error_code", code, "total_duration_ms", time.Since(started).Milliseconds())
+		log.DefaultLogger.Error("dashboard draft failed", "request_id", requestID, "model", a.config.LLMModel, "error_code", code, "error_detail", err.Error(), "total_duration_ms", time.Since(started).Milliseconds())
 		return nil
 	}
 	log.DefaultLogger.Info("dashboard draft completed", "request_id", requestID, "model", a.config.LLMModel, "status", "completed", "total_duration_ms", time.Since(started).Milliseconds())
@@ -243,8 +243,12 @@ func normalizeStreamError(err error) (string, string, bool) {
 		return "LLM_PROTOCOL_ERROR", "模型回傳了不相容的串流格式。", true
 	case errors.Is(err, dashboard.ErrConflict):
 		return "DRAFT_CONFLICT", "草稿工作已經開始。", false
+	case errors.Is(err, dashboard.ErrInvalidOutput):
+		return "DRAFT_INVALID_OUTPUT", "模型輸出的 Dashboard JSON 無效，請重新產生或改用較大的模型。", true
 	case errors.Is(err, grafanamcp.ErrUnavailable):
 		return "MCP_UNAVAILABLE", "Grafana MCP 無法使用。", true
+	case errors.Is(err, grafanamcp.ErrToolFailed), errors.Is(err, grafanamcp.ErrToolDenied):
+		return "MCP_TOOL_FAILED", "Grafana MCP 工具呼叫失敗。", false
 	default:
 		return "LLM_UNAVAILABLE", "目前無法連線模型服務。", true
 	}
